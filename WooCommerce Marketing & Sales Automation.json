@@ -1,0 +1,1149 @@
+{
+  "name": "WooCommerce Marketing & Sales Automation *",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ",
+          "mode": "list",
+          "cachedResultName": "woocommerce ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "اعضا",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "c0c920a9-58c0-4189-94ca-e69833260022",
+      "name": "Get row(s) in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -464,
+        -32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kawXBgDD33Q12cQm",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "recordType",
+              "type": "string",
+              "value": "email",
+              "id": "4074f7ca-facf-4776-90b2-9c8b6206a767"
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "value": "={{ $json['ایمیل'] }}",
+              "id": "e8e2c1cb-6d95-4103-a16e-7893a9259c95"
+            },
+            {
+              "name": "firstName",
+              "type": "string",
+              "value": "={{ $json['نام'] }}",
+              "id": "b72d0141-8464-485e-a8d8-6345338ba4af"
+            },
+            {
+              "id": "e70de57f-739a-4f77-92df-70d349a6c510",
+              "name": "interest",
+              "value": "={{ $json[\"علاقه مندی\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f14541e0-f0cb-4a86-9641-2d05f1c5e20d",
+      "name": "Edit Fields3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -16,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "email",
+        "options": {}
+      },
+      "id": "c66f1d2f-8f33-4662-9d34-efbadc15cf3f",
+      "name": "Remove Duplicates",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 100,
+        "options": {
+          "order": "desc",
+          "orderBy": "date"
+        }
+      },
+      "id": "98a5ffdd-35c7-4069-9a75-ad7df2de8ca3",
+      "name": "Get many products",
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        160
+      ],
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "5i8DyQMb2ky8x5qS",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const p = item.json;\n  if (!p || !p.id) continue;\n\n  const price = parseFloat(p.price ?? p.regular_price ?? '0') || 0;\n  const image = Array.isArray(p.images) && p.images.length > 0 ? p.images[0].src : '';\n  const categories = Array.isArray(p.categories) ? p.categories.map(c => c.name.trim()) : [];\n\n  output.push({\n    json: {\n      recordType: 'product',\n      productId: p.id,\n      name: (p.name || '').trim(),\n      price: price,\n      priceFormatted: `$${price.toFixed(2)}`,\n      permalink: p.permalink || '',\n      image: image,\n      categories: categories,\n      dateCreated: p.date_created || null,\n    },\n  });\n}\n\nconst oneDayAgo = new Date();\noneDayAgo.setDate(oneDayAgo.getDate() - 1);\n\nconst recentOnly = output.filter((o) => {\n  if (!o.json.dateCreated) return false;\n  return new Date(o.json.dateCreated) >= oneDayAgo;\n});\n\n// اگر محصول جدیدی وجود نداشت، یک آیتم توخالی بفرست تا Merge متوقف نشود\nif (recentOnly.length === 0) {\n  return [{ json: { recordType: 'no_product' } }];\n}\n\nreturn recentOnly;"
+      },
+      "id": "ec88610c-ba5d-439c-9321-b48e7dfd77e1",
+      "name": "Code in JavaScript5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "recordType",
+              "type": "string",
+              "value": "={{ $json.recordType }}",
+              "id": "965324b1-51cd-49a1-bf5e-1564eaaeb451"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "6a86f3a8-28a0-4b9f-bae7-18faff384f12",
+      "name": "Edit Fields2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        160
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "574055e8-c09f-4275-91e3-65b0df14844a",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        432,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const all = $input.all().map((i) => i.json);\n\n// ۱. جدا کردن کاربران\nconst users = all\n  .filter((r) => r.recordType === 'email' || r.email)\n  .map((r) => ({\n    email: String(r.email || '').trim().toLowerCase(),\n    firstName: r.firstName || 'کاربر عزیز',\n    interest: (r.interest || '').trim()\n  }))\n  .filter((u) => u.email && u.interest);\n\n// ۲. جدا کردن محصولات (حذف آیتم‌های صوری no_product)\nconst products = all.filter((r) => r.recordType === 'product' && r.productId);\n\n// اگر محصول جدید یا کاربری وجود نداشت، فرآیند را بدون خطا تمام کن\nif (products.length === 0 || users.length === 0) {\n  return [];\n}\n\n// یکسان‌سازی کاربران (حذف ایمیل‌های تکراری)\nconst seen = new Set();\nconst uniqueUsers = users.filter((u) => {\n  if (seen.has(u.email)) return false;\n  seen.add(u.email);\n  return true;\n});\n\nconst categoryMap = {\n  'رمان جنایی': ['رمان جنایی', 'جنایی', 'جرم', 'کارآگاهی'],\n  'رمان فانتزی': ['رمان فانتزی', 'فانتزی', 'خیالی', 'تخیلی'],\n  'رمان ادبیاتی': ['رمان ادبیاتی', 'ادبیاتی', 'ادبی', 'کلاسیک']\n};\n\nfunction findMatchingCategory(userInterest) {\n  const interest = userInterest.trim().toLowerCase();\n  for (const [mainCategory, keywords] of Object.entries(categoryMap)) {\n    for (const keyword of keywords) {\n      if (interest.includes(keyword) || keyword.includes(interest)) {\n        return mainCategory;\n      }\n    }\n  }\n  return null;\n}\n\nconst finalOutput = [];\n\nfor (const user of uniqueUsers) {\n  const matchedCategory = findMatchingCategory(user.interest);\n  if (!matchedCategory) continue;\n\n  const matchedProducts = products.filter((p) => {\n    return Array.isArray(p.categories) && \n           p.categories.some(cat => cat.trim() === matchedCategory);\n  });\n\n  if (matchedProducts.length === 0) continue;\n\n  finalOutput.push({\n    json: {\n      email: user.email,\n      firstName: user.firstName,\n      interest: user.interest,\n      matchedCategory: matchedCategory,\n      products: matchedProducts,\n      productCount: matchedProducts.length,\n    }\n  });\n}\n\nreturn finalOutput;"
+      },
+      "id": "7d0e6907-0bf8-457d-b712-1df2ebfed866",
+      "name": "Code in JavaScript3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "sendAt",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "99603cfe-b31f-47f1-8505-ea31effb98b8",
+      "name": "Edit Fields4",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\nfunction escapeHtml(str = '') {\n  return String(str)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;');\n}\n\nfunction formatToman(price) {\n  if (!price || price === 0) return 'رایگان / تماس بگیرید';\n  return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';\n}\n\nfunction renderProductCard(p) {\n  return `\n    <table style=\"width:100%;margin-bottom:16px;border:1px solid #eee;border-radius:8px;direction:rtl;text-align:right;background:#ffffff;\">\n      <tr>\n        <td style=\"width:120px;padding:8px;\">\n          ${p.image ? `<img src=\"${p.image}\" width=\"100\" style=\"border-radius:6px;display:block;\" />` : ''}\n        </td>\n        <td style=\"padding:12px;vertical-align:top;\">\n          <div style=\"font-weight:bold;font-size:15px;color:#333;margin-bottom:6px;\">${escapeHtml(p.name)}</div>\n          <div style=\"color:#2e7d32;font-weight:bold;margin:6px 0;\">${formatToman(p.price)}</div>\n          <a href=\"${p.permalink}\" style=\"display:inline-block;margin-top:6px;color:#0277bd;text-decoration:none;font-size:13px;font-weight:bold;\">مشاهده و خرید کتاب &larr;</a>\n        </td>\n      </tr>\n    </table>`;\n}\n\nfor (const item of items) {\n  const j = item.json;\n  const products = j.products || [];\n  const productCards = products.map(renderProductCard).join('\\n');\n  const interest = j.interest || 'مورد علاقه شما';\n\n  const htmlBody = `\n    <div style=\"font-family:Tahoma,Arial,sans-serif;max-width:600px;margin:0 auto;direction:rtl;text-align:right;padding:20px;background:#f9f9f9;border-radius:10px;\">\n      <h2 style=\"color:#222;font-size:18px;\">سلام ${escapeHtml(j.firstName || 'مخاطب عزیز')} جان، جدیدترین کتاب‌های دسته «${escapeHtml(interest)}» رسید!</h2>\n      <p style=\"color:#555;font-size:14px;line-height:1.6;\">\n        با توجه به علاقه‌مندی شما به کتاب‌های <b>${escapeHtml(interest)}</b>، به‌تازگی ${products.length} عنوان جدید به فروشگاه اضافه شده که پیشنهاد می‌کنیم نگاهی به آن‌ها بیندازید:\n      </p>\n      <br />\n      ${productCards}\n      <p style=\"color:#888;font-size:11px;margin-top:24px;border-top:1px solid #ddd;padding-top:12px;text-align:center;\">\n        این ایمیل بر اساس علاقه‌مندی‌های ثبت‌شده شما در خبرنامه اختصاصی ارسال شده است.\n      </p>\n    </div>`;\n\n  output.push({\n    json: {\n      to: j.email,\n      subject: `📚 ${j.firstName || 'کاربر'} عزیز، جدیدترین کتاب‌های ${interest} منتظر شماست!`,\n      htmlBody,\n    },\n  });\n}\n\nreturn output;"
+      },
+      "id": "d0626852-f919-4ca6-b8cf-335f5b4d2a7c",
+      "name": "Code in JavaScript4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.htmlBody }}",
+        "options": {}
+      },
+      "id": "85599043-9253-48f6-b1fe-81889bd2c127",
+      "name": "Send a message2",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1328,
+        64
+      ],
+      "webhookId": "3bb9a42e-407f-4e78-80e5-d51168b97b15",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F2H7YWUW6MPzOwVM",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a3564fd7-ec50-46e1-b5d4-e7ceba3ed3f6",
+              "name": "شناسه سفارش",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "1ad72821-699b-4dd9-a9ee-5dba01e15882",
+              "name": "شماره سفارش",
+              "value": "={{ $json.number }}",
+              "type": "string"
+            },
+            {
+              "id": "96613343-3b23-4984-8d00-9dc65f8aeca6",
+              "name": "نام مشتری",
+              "value": "={{ $json.billing.first_name }} {{ $json.billing.last_name }}",
+              "type": "string"
+            },
+            {
+              "id": "5f26ea58-cdd5-4c01-b6e3-8fb35b3b9dce",
+              "name": "ایمیل مشتری",
+              "value": "={{ $json.billing.email }}",
+              "type": "string"
+            },
+            {
+              "id": "9c262786-e49e-41e9-95fb-d0e1717a48ff",
+              "name": "مبلغ کل",
+              "value": "={{ $json.total }}",
+              "type": "string"
+            },
+            {
+              "id": "445d154e-1c46-4771-bab0-5b9a140a623d",
+              "name": "واحد پول",
+              "value": "={{ $json.currency }}",
+              "type": "string"
+            },
+            {
+              "id": "0e2299be-b23e-47ee-8af2-c7627e2a3a5a",
+              "name": "وضعیت",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "617bf281-fdf3-4a9a-9651-6666adf7e573",
+              "name": "تاریخ ثبت",
+              "value": "={{ new Date($json.date_created).toLocaleDateString('fa-IR-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }) + ' ' + new Date($json.date_created).toLocaleTimeString('fa-IR-u-nu-latn', { hour: '2-digit', minute: '2-digit', hour12: false }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "655b014c-3625-46d7-b132-fa88e43efde6",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -240,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ",
+          "mode": "list",
+          "cachedResultName": "woocommerce ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 358948930,
+          "mode": "list",
+          "cachedResultName": "سفارشات",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ/edit#gid=358948930"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "مبلغ کل": "={{ $json[\"مبلغ کل\"] }}",
+            "ایمیل مشتری": "={{ $json[\"ایمیل مشتری\"] }}",
+            "واحد پول": "={{ $json[\"واحد پول\"] }}",
+            "وضعیت": "={{ $json[\"وضعیت\"] }}",
+            "شناسه سفارش": "={{ $json[\"شناسه سفارش\"] }}",
+            "شماره سفارش": "={{ $json[\"شماره سفارش\"] }}",
+            "نام مشتری": "={{ $json[\"نام مشتری\"] }}",
+            "تاریخ ثبت": "={{ $json[\"تاریخ ثبت\"] }}"
+          },
+          "matchingColumns": [
+            "شناسه سفارش"
+          ],
+          "schema": [
+            {
+              "id": "شناسه سفارش",
+              "displayName": "شناسه سفارش",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "شماره سفارش",
+              "displayName": "شماره سفارش",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "وضعیت",
+              "displayName": "وضعیت",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "مبلغ کل",
+              "displayName": "مبلغ کل",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "واحد پول",
+              "displayName": "واحد پول",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "نام مشتری",
+              "displayName": "نام مشتری",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ایمیل مشتری",
+              "displayName": "ایمیل مشتری",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "تاریخ ثبت",
+              "displayName": "تاریخ ثبت",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "تعداد آیتم",
+              "displayName": "تعداد آیتم",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e3d76270-d93c-4b3a-b03c-69f761adbc25",
+      "name": "datas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -16,
+        384
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kawXBgDD33Q12cQm",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$vars.ADMIN_EMAIL}}",
+        "subject": "=سفارش جدید شماره {{ $json['شماره سفارش'] }}",
+        "message": "=<div dir=\"rtl\" style=\"font-family: Tahoma, Arial, sans-serif; max-width: 550px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);\">\n  \n  <!-- Header -->\n  <div style=\"background-color: #2563eb; color: #ffffff; padding: 20px; text-align: center;\">\n    <h2 style=\"margin: 0; font-size: 20px; font-weight: bold;\">🛒 ثبت سفارش جدید در وب‌سایت</h2>\n  </div>\n\n  <!-- Body -->\n  <div style=\"padding: 24px; color: #333333; line-height: 1.6;\">\n    <p style=\"font-size: 15px; margin-top: 0;\">سلام مدیر محترم، یک سفارش جدید در سیستم ثبت شد:</p>\n    \n    <table style=\"width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;\">\n      <tr style=\"border-bottom: 1px solid #f0f0f0;\">\n        <td style=\"padding: 10px 0; color: #666666; font-weight: bold;\">شماره سفارش:</td>\n        <td style=\"padding: 10px 0; text-align: left; font-weight: bold; color: #2563eb;\">#{{ $json[\"شماره سفارش\"] }}</td>\n      </tr>\n      <tr style=\"border-bottom: 1px solid #f0f0f0;\">\n        <td style=\"padding: 10px 0; color: #666666;\">نام خریدار:</td>\n        <td style=\"padding: 10px 0; text-align: left;\">{{ $json[\"نام مشتری\"] }}</td>\n      </tr>\n      <tr style=\"border-bottom: 1px solid #f0f0f0;\">\n        <td style=\"padding: 10px 0; color: #666666;\">ایمیل:</td>\n        <td style=\"padding: 10px 0; text-align: left; dir: ltr;\">{{ $json[\"ایمیل مشتری\"] }}</td>\n      </tr>\n      <tr style=\"border-bottom: 1px solid #f0f0f0;\">\n        <td style=\"padding: 10px 0; color: #666666;\">مبلغ کل:</td>\n        <td style=\"padding: 10px 0; text-align: left; font-weight: bold; color: #16a34a;\">{{ $json[\"مبلغ کل\"] }} {{ $json[\"واحد پول\"] }}</td>\n      </tr>\n      <tr style=\"border-bottom: 1px solid #f0f0f0;\">\n        <td style=\"padding: 10px 0; color: #666666;\">تاریخ و زمان ثبت:</td>\n        <td style=\"padding: 10px 0; text-align: left;\">{{ $json[\"تاریخ ثبت\"] }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding: 10px 0; color: #666666;\">وضعیت سفارش:</td>\n        <td style=\"padding: 10px 0; text-align: left;\"><span style=\"background-color: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-size: 12px;\">{{ $json[\"وضعیت\"] }}</span></td>\n      </tr>\n    </table>\n  </div>\n\n  <!-- Footer -->\n  <div style=\"background-color: #f8fafc; padding: 12px; text-align: center; border-top: 1px solid #e0e0e0; font-size: 12px; color: #94a3b8;\">\n    سیستم اتوماسیون هوشمند n8n\n  </div>\n\n</div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "18f9496e-2d04-4e4e-a7cf-07aeb4b74f5f",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        384
+      ],
+      "webhookId": "c3a1f72f-7fd8-4af3-93c5-530f9cb318a4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F2H7YWUW6MPzOwVM",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (items.length === 0) {\n  return [];\n}\n\nreturn items.map((item) => {\n  const p = item.json;\n  \n  // بررسی اولویت قیمت فروش ویژه، قیمت عمومی و قیمت عادی\n  let rawPrice = '0';\n  if (p.sale_price && p.sale_price !== '0') {\n    rawPrice = p.sale_price;\n  } else if (p.price && p.price !== '0') {\n    rawPrice = p.price;\n  } else if (p.regular_price) {\n    rawPrice = p.regular_price;\n  }\n\n  const price = parseFloat(rawPrice) || 0;\n\n  return {\n    json: {\n      \"شناسه محصول\": p.id,\n      \"نام محصول\": (p.name || '').trim(),\n      \"قیمت\": price,\n    },\n  };\n});"
+      },
+      "id": "92a05bf0-26b1-4ec0-9bf8-e2ed374afe35",
+      "name": "Code in JavaScript1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ",
+          "mode": "list",
+          "cachedResultName": "woocommerce ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1687895869,
+          "mode": "list",
+          "cachedResultName": "قیمت محصولات",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LPsO4iFYl_WOWV1G3Tn1aol7iGuE-Ujry4cjUEzFHvQ/edit#gid=1687895869"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "نام محصول": "={{ $json[\"نام محصول\"] }}",
+            "قیمت": "={{ $json[\"قیمت\"] }}",
+            "شناسه محصول": "={{ $json[\"شناسه محصول\"] }}"
+          },
+          "matchingColumns": [
+            "شناسه محصول"
+          ],
+          "schema": [
+            {
+              "id": "نام محصول",
+              "displayName": "نام محصول",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "قیمت",
+              "displayName": "قیمت",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "شناسه محصول",
+              "displayName": "شناسه محصول",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6dd81a37-3e71-4246-805a-168b7fcc69a2",
+      "name": "Name of product and Price",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -16,
+        608
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kawXBgDD33Q12cQm",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet totalSales = 0;\nlet orderCount = items.length;\n\n// روش ایمن برای استخراج و جمع زدن قیمت‌ها\nitems.forEach(item => {\n  const rawTotal = item.json.total;\n  const numericTotal = typeof rawTotal === 'number' \n    ? rawTotal \n    : parseFloat(String(rawTotal || '0').replace(/[^0-9.-]+/g, '')) || 0;\n  \n  totalSales += numericTotal;\n});\n\nconst averageOrderValue = orderCount > 0 ? Math.round(totalSales / orderCount) : 0;\n\n// تبدیل استاندراد و دقیق تاریخ میلادی به شمسی بدون نیاز به توابع دستی\nfunction getPersianDateString() {\n  const now = new Date();\n  const formatter = new Intl.DateTimeFormat('fa-IR-u-nu-latn', {\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n    timeZone: 'Asia/Tehran'\n  });\n  return formatter.format(now); // خروجی استاندارد: YYYY/MM/DD\n}\n\nconst persianDate = getPersianDateString();\n\n// فرمت‌دهی ایمن اعداد به فارسی\nconst formattedOrderCount = (orderCount || 0).toLocaleString('fa-IR');\nconst formattedTotalSales = (totalSales || 0).toLocaleString('fa-IR');\nconst formattedAOV = (averageOrderValue || 0).toLocaleString('fa-IR');\n\nconst htmlReport = `\n<div style=\"font-family: Tahoma, Arial, sans-serif; direction: rtl; text-align: right; background-color: #f8f9fa; padding: 20px; border-radius: 10px; color: #333; max-width: 500px; margin: auto; border: 1px solid #e9ecef;\">\n  <h2 style=\"color: #2c3e50; border-bottom: 2px solid #4bc0c0; padding-bottom: 10px; margin-top: 0; font-size: 18px;\">\n    📊 گزارش فروش ۷ روز گذشته (${persianDate})\n  </h2>\n  \n  <table style=\"width: 100%; border-collapse: collapse; margin-top: 15px;\">\n    <tr style=\"border-bottom: 1px solid #dee2e6;\">\n      <td style=\"padding: 10px 0; color: #555;\">🛒 تعداد سفارشات:</td>\n      <td style=\"padding: 10px 0; font-weight: bold; text-align: left; color: #2c3e50;\">${formattedOrderCount} عدد</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #dee2e6;\">\n      <td style=\"padding: 10px 0; color: #555;\">💰 مجموع فروش:</td>\n      <td style=\"padding: 10px 0; font-weight: bold; text-align: left; color: #27ae60;\">${formattedTotalSales} تومان</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px 0; color: #555;\">📈 میانگین ارزش هر سفارش:</td>\n      <td style=\"padding: 10px 0; font-weight: bold; text-align: left; color: #2980b9;\">${formattedAOV} تومان</td>\n    </tr>\n  </table>\n  \n  <div style=\"margin-top: 20px; font-size: 11px; color: #888; text-align: center;\">\n    گزارش به‌صورت خودکار توسط سیستم اتوماسیون n8n تولید شده است.\n  </div>\n</div>\n`;\n\nreturn {\n  json: {\n    orderCount,\n    totalSales,\n    averageOrderValue,\n    persianDate,\n    htmlReport\n  }\n};"
+      },
+      "id": "d3e6264f-0de5-42a6-a574-f1ccbdf1fa43",
+      "name": "Code in JavaScript2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$vars.ADMIN_EMAIL}}",
+        "subject": "=گزارش فروش ۷ روز گذشته {{ $json.persianDate }}",
+        "message": "={{ $json.htmlReport }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "656590dc-6a84-4763-b4b2-eeec2f6ba2c4",
+      "name": "Send a message1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        832
+      ],
+      "webhookId": "1745cf75-6a1a-419a-9bc6-a1bf6a105f04",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F2H7YWUW6MPzOwVM",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "دریافت مخاطبین",
+        "height": 192,
+        "width": 880,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -528,
+        -64
+      ],
+      "typeVersion": 1,
+      "id": "87adf917-a238-4e59-a84d-88ab8a4c020e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "دریافت مجصولات",
+        "height": 176,
+        "width": 880,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -528,
+        144
+      ],
+      "typeVersion": 1,
+      "id": "a42f8df8-1697-4ded-88c1-fc6779c5a750",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "ترکیب و پرازش سفارشات یک روز گذشته\n\n\n\n\n\n\n\n",
+        "height": 240,
+        "width": 464,
+        "color": "#7C6B5A"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "be22f4fc-8c10-4a33-b2d1-219464bb35ee",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "قالب بندی و ارسال ",
+        "height": 240,
+        "width": 672,
+        "color": "#494147"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        848,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "042e7dda-cb39-4b92-a525-d944ba152334",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "ثبت آخرین سفارش و اطلاع‌رسانی",
+        "height": 192,
+        "width": 1136,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -752,
+        352
+      ],
+      "typeVersion": 1,
+      "id": "95a1742b-0e18-4229-a9a2-95023362fdf1",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "ثبت کاتالوگ محصولات و قیمت‌ها برای ارشیو محصولات پرفروش",
+        "height": 208,
+        "width": 1040,
+        "color": "#3F1744"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -864,
+        560
+      ],
+      "typeVersion": 1,
+      "id": "44d81b0e-47c4-4805-9d1c-f434c4daba1f",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "تحلیل مالی و گزارش فروش ۷ روزه",
+        "height": 208,
+        "width": 992,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -816,
+        784
+      ],
+      "typeVersion": 1,
+      "id": "8a0543b3-795b-4680-9cf4-136ae2a73f6d",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "options": {
+          "order": "desc",
+          "orderBy": "=popularity"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        608
+      ],
+      "id": "e36a2529-4743-431f-9ea9-ef10d6676bbe",
+      "name": "Get many products1",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "5i8DyQMb2ky8x5qS",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "options": {
+          "after": "={{ $now.minus({ days: 7 }).toISO() }}",
+          "status": "any"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        832
+      ],
+      "id": "56852f49-8fa6-42fa-b3fb-22ce1c47a36f",
+      "name": "Get many orders",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "5i8DyQMb2ky8x5qS",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "after": "={{ $now.minus({ minutes: 6 }).toISO() }}",
+          "status": "any"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        384
+      ],
+      "id": "4a140fd8-a037-4358-957a-f3edc4eca771",
+      "name": "Get many orders1",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "5i8DyQMb2ky8x5qS",
+          "name": "WooCommerce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst validItems = items.filter(item => {\n  const row = item.json;\n  \n  // بررسی وجود ایمیل و فرمت معتبر\n  const email = row['ایمیل'] || row['email'] || '';\n  const emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  const isValidEmail = emailPattern.test(email.trim());\n  \n  // بررسی وجود علاقه‌مندی\n  const interest = row['علاقه مندی'] || row['interest'] || '';\n  const isValidInterest = interest.trim().length > 0;\n  \n  // فقط ردیف‌هایی که هر دو شرط رو دارن، برگردون\n  return isValidEmail && isValidInterest;\n});\n\nreturn validItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -32
+      ],
+      "id": "f32c34ba-8d19-48de-b16f-dc1ecdd1b98c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "05ece545-ac65-4196-8412-d8b73e1fca70",
+      "name": "Schedule Trigger 1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -704,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 9,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        832
+      ],
+      "id": "e85002cc-9d37-4629-9998-07e655a47581",
+      "name": "Schedule Trigger 4"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 9,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        608
+      ],
+      "id": "8bd788cb-6871-4472-814e-b106630289ea",
+      "name": "Schedule Trigger 3"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        400
+      ],
+      "id": "17522543-1163-4188-ab84-c2c73c289ce5",
+      "name": "Schedule Trigger 2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many products": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "datas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "datas": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Name of product and Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many products1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many orders": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many orders1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger 1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger 4": {
+      "main": [
+        [
+          {
+            "node": "Get many orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger 3": {
+      "main": [
+        [
+          {
+            "node": "Get many products1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger 2": {
+      "main": [
+        [
+          {
+            "node": "Get many orders1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "2cd77f9a-da4e-49e4-9a96-794069e555c8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ceb93fff43771b99c04efa0fddb98487a66895b92e3d3a5dd04937e86f29a50a"
+  },
+  "nodeGroups": [],
+  "id": "c7szjxXwn31YpsAY",
+  "tags": []
+}
